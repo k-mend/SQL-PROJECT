@@ -1,79 +1,144 @@
-#  Course Management Database System
+# Course Management SQL Project
 
-This project implements a relational database system for managing a simplified academic institution's data, including students, instructors, courses, and enrollments. It also demonstrates SQL features like constraints, views, indexing, triggers, and complex queries.
+## Overview
 
-## Database Structure
+This project simulates a university-level course management system using PostgreSQL. It covers a wide range of database functionalities including:
 
-### 1. Database
-- `course_management`: The main database created to hold all relevant tables and data.
+* Creating databases and tables
+* Inserting and manipulating data
+* Complex queries for data insights
+* Creation of views, indexes, and triggers
 
-### 2. Tables
-- **students**: Stores student personal and contact information.
-- **instructors**: Contains information about course instructors.
-- **courses**: Details course offerings and links each to an instructor.
-- **enrollments**: Represents student registrations in courses along with grades.
-- **enrollment_logs**: A log table automatically populated with new enrollments via a trigger.
+The system manages students, instructors, courses, and enrollments, ensuring data integrity and providing advanced querying capabilities.
 
-##  Sample Data
+## Schema Design
 
-Each table is seeded with meaningful sample data to simulate a working academic environment. Some entries are deleted or updated to test constraints and maintain data integrity.
+### Database
 
-## Queries Included
+```sql
+CREATE DATABASE course_management;
+```
 
-The SQL file includes various queries to explore and analyze the dataset:
+### Tables
 
-- List students enrolled in one or more courses.
-![Screenshot](Screenshot%20from%202025-05-04%2014-56-24.png)
+#### Students
 
-- Identify students enrolled in multiple courses.
+```sql
+CREATE TABLE students (
+  student_id INT PRIMARY KEY NOT NULL,
+  first_name VARCHAR(50) NOT NULL,
+  last_name VARCHAR(50) NOT NULL,
+  email VARCHAR(100) UNIQUE,
+  date_of_birth DATE NOT NULL
+);
+```
 
-![Screenshot 1](Screenshot%20from%202025-05-04%2015-14-34.png)
-- Count students per course.
-![Screenshot 2](Screenshot%20from%202025-05-04%2015-41-05.png)
-- Calculate grade distribution per course.
-![Screenshot 3](Screenshot%20from%202025-05-04%2017-35-51.png)
-- students who have not enrolled in any course
-![Screenshot 4](Screenshot%20from%202025-05-04%2017-35-58.png)
-- students and all their grades across courses
-![Screenshot 5](Screenshot%20from%202025-05-04%2017-43-30.png)
-- Display instructors with the number of courses taught.
-![Screenshot 6](Screenshot%20from%202025-05-04%2017-56-30.png)
-- Trace students pursuing coursses taught by insstructor named John Smith.
-![Screenshot 7](Screenshot%20from%202025-05-04%2018-58-00.png)
-- Identify top performers (`A`, `B`, `C` grades).
-![Screenshot 8](Screenshot%20from%202025-05-04%2018-58-16.png)
-- Students failing with an E in more than one course.
-![Screenshot 9](Screenshot%20from%202025-05-04%2020-40-59.png)
+#### Instructors
 
-## Views and Indexes
+```sql
+CREATE TABLE instructors (
+  instructor_id INT PRIMARY KEY NOT NULL,
+  first_name VARCHAR(50) NOT NULL,
+  last_name VARCHAR(50) NOT NULL,
+  email VARCHAR(100) UNIQUE
+);
+```
 
-- `student_course_summary`: A view summarizing each student's courses and grades.
-- `idx_students_id`: An index created on `enrollments.students_id` to optimize query performance.
+#### Courses
 
-##  Triggers
+```sql
+CREATE TABLE courses (
+  course_id INT PRIMARY KEY NOT NULL,
+  course_name VARCHAR(50) NOT NULL,
+  course_description TEXT NOT NULL,
+  instructors_id INT REFERENCES instructors(instructor_id)
+);
+```
 
-A **trigger** is defined to **automatically log every new student enrollment** into the `enrollment_logs` table:
+#### Enrollments
 
-- **Trigger Function**: `log_new_enrollment()` a trigger function executed every time a new enrollment is made
+```sql
+CREATE TABLE enrollments (
+  enrollment_id INT PRIMARY KEY NOT NULL,
+  students_id INT REFERENCES students(student_id) NOT NULL,
+  courses_id INT REFERENCES courses(course_id) NOT NULL,
+  enrollment_date DATE NOT NULL,
+  grade VARCHAR(1) NOT NULL
+);
+```
 
-- **Trigger Event**: `AFTER INSERT` on the `enrollments` that fire after an INSERT operation is made on the 'enrollments' table which in turn reflects on the 'enrollment_logs' table
-- **Logged Info**: The information being held in the 'enrollment_logs' table of the new record of students being enrolled is : Student ID, Course ID, Timestamp
+### Data Manipulation
 
-## Insights and Challenges
+Includes insertion of sample data, updates to reflect data constraints, and deletions to simulate realistic scenarios.
 
-### Insights Gained
-- Learned how to design and normalize relational database schemas for real-world systems (students, instructors, courses, enrollments).
-- Understood the importance of **foreign key constraints** in maintaining data integrity across related tables.
-- Practiced using **SQL JOINs** for deriving meaningful insights, such as student performance, course popularity, and instructor activity.
-- Implemented **views** for abstraction and reuse of complex queries.
-- Utilized **triggers** and **logging mechanisms** to track real-time changes and maintain audit trails.
-- Applied **indexing** to optimize query performance on frequently accessed columns.
+### Analytical Queries
 
-###  Challenges Encountered
-- Managing foreign key dependencies during deletions and updates required careful query sequencing.
-- slow execution and database connection with dbeaver made me switch to vs code.
-- Some sample data had issues with unique constraints (e.g., duplicate or malformed email addresses), which required validation and correction.
-- To ensure correct results for edge cases such as students with no enrollments or failing grades in multiple courses I had to update and delete some records in the table which was not easy especially because I had foreign keys defined as unique constraints in multiple tables.
-- Understanding PL/pgSQL syntax was not easy especially because it's an advanced SQL extension.
+* Students enrolled in multiple courses
+* Total number of students per course
+* Average grade distribution
+* Instructor teaching loads
+* Students with failing grades in multiple courses
 
+### View
 
+```sql
+CREATE VIEW student_course_summary AS
+SELECT
+  s.first_name || ' ' || s.last_name AS student_name,
+  c.course_name,
+  e.grade
+FROM enrollments e
+JOIN students s ON s.student_id = e.students_id
+JOIN courses c ON c.course_id = e.courses_id;
+```
+
+### Index
+
+```sql
+CREATE INDEX idx_students_id ON enrollments(students_id);
+```
+
+### Trigger and Logging
+
+Logging new enrollments using a trigger:
+
+```sql
+CREATE TABLE enrollment_logs (
+  log_id SERIAL PRIMARY KEY,
+  student_id INT,
+  course_id INT,
+  log_time TIMESTAMP DEFAULT CURRENT_TIMESTAMP
+);
+
+CREATE OR REPLACE FUNCTION log_new_enrollment()
+RETURNS TRIGGER AS $$
+BEGIN
+  INSERT INTO enrollment_logs(student_id, course_id)
+  VALUES (NEW.students_id, NEW.courses_id);
+  RETURN NEW;
+END;
+$$ LANGUAGE plpgsql;
+
+CREATE TRIGGER after_enrollment_insert
+AFTER INSERT ON enrollments
+FOR EACH ROW
+EXECUTE FUNCTION log_new_enrollment();
+```
+
+## Challenges Encountered
+
+* Ensuring referential integrity during deletions and updates
+* Handling inconsistent sample data (e.g., missing instructors for courses)
+* Designing realistic queries to extract meaningful insights
+* Testing the trigger to ensure correct logging behavior
+
+## Insights Gained
+
+* Deepened understanding of foreign key relationships and cascading effects
+* Practical exposure to writing complex SQL queries for real-world problems
+* Experience in modularizing SQL logic using views and triggers
+* Awareness of indexing for performance optimization
+
+---
+
+> **Note:** This project is a learning exercise designed to simulate a production-like relational database system. Ensure PostgreSQL is installed to test these queries in a real environment.
