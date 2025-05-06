@@ -4,10 +4,12 @@
 
 This project simulates a university-level course management system using PostgreSQL. It covers a wide range of database functionalities including:
 
-* Creating databases and tables
-* Inserting and manipulating data
-* Complex queries for data insights
-* Creation of views, indexes, and triggers
+* Creating databases and tables.
+* An Entity Relationship Diagram named erd.png.
+* Inserting and manipulating data.
+* Complex queries for data insights.
+* Creation of views, indexes, and triggers.
+* outputs of the query inform of screenshots named screenshots.
 
 The system manages students, instructors, courses, and enrollments, ensuring data integrity and providing advanced querying capabilities.
 
